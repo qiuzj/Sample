@@ -15,6 +15,10 @@ public class MessageRelation {
 
     private Integer type;
 
+    private Long otherUid;
+    
+    private Date createTime;
+
     public Integer getType() {
         return type;
     }
@@ -22,9 +26,6 @@ public class MessageRelation {
     public void setType(Integer type) {
         this.type = type;
     }
-
-    private Long otherUid;
-    private Date createTime;
 
     public Long getMid() {
         return mid;

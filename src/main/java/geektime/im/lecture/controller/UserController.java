@@ -33,24 +33,34 @@ public class UserController {
     public String welcomePage(@RequestParam(name = "username", required = false)
                                       String username, HttpSession session) {
         if (session.getAttribute(Constants.SESSION_KEY) != null) {
-            return "index";
+//            return "index"; // 首页
+            return "index_ws"; // 首页
         } else {
-            return "login";
+            return "login"; // 登录页
         }
     }
 
+    /**
+     * 登录
+     * 
+     * @param email
+     * @param password
+     * @param model
+     * @param session
+     * @return
+     */
     @RequestMapping(path = "/login")
     public String login(@RequestParam String email, @RequestParam String password, Model model, HttpSession session) {
         try {
-            User loginUser = userService.login(email, password);
-            model.addAttribute("loginUser", loginUser);
-            session.setAttribute(Constants.SESSION_KEY, loginUser);
+            User loginUser = userService.login(email, password); // 登录认证
+            model.addAttribute("loginUser", loginUser); // 返回当前用户
+            session.setAttribute(Constants.SESSION_KEY, loginUser); // 保存到会话
 
-            List<User> otherUsers = userService.getAllUsersExcept(loginUser);
-            model.addAttribute("otherUsers", otherUsers);
+            List<User> otherUsers = userService.getAllUsersExcept(loginUser); // 获取非当前用户的所有用户信息
+            model.addAttribute("otherUsers", otherUsers); // 返回其他用户
 
-            MessageContactVO contactVO = userService.getContacts(loginUser);
-            model.addAttribute("contactVO", contactVO);
+            MessageContactVO contactVO = userService.getContacts(loginUser); // 获取所有会话信息及未读数
+            model.addAttribute("contactVO", contactVO); // 返回会话信息
             return "index";
 
         } catch (UserNotExistException e1) {

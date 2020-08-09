@@ -99,6 +99,8 @@ public class MessageServiceImpl implements MessageService {
         User self = userRepository.findOne(senderUid);
         User other = userRepository.findOne(recipientUid);
         MessageVO messageVO = new MessageVO(mid, content, self.getUid(), messageContactSender.getType(), other.getUid(), messageContent.getCreateTime(), self.getAvatar(), other.getAvatar(), self.getUsername(), other.getUsername());
+        
+        // Redis publish. NewMessageListener监听
         redisTemplate.convertAndSend(Constants.WEBSOCKET_MSG_TOPIC, JSONObject.toJSONString(messageVO));
 
         return messageVO;
@@ -106,7 +108,9 @@ public class MessageServiceImpl implements MessageService {
 
     @Override
     public List<MessageVO> queryConversationMsg(long ownerUid, long otherUid) {
+    	// 查询对话索引关系
         List<MessageRelation> relationList = relationRepository.findAllByOwnerUidAndOtherUidOrderByMidAsc(ownerUid, otherUid);
+        // 查询对话索引的消息内容，更新未读数
         return composeMessageVO(relationList, ownerUid, otherUid);
     }
 
@@ -120,26 +124,32 @@ public class MessageServiceImpl implements MessageService {
         if (null != relationList && !relationList.isEmpty()) {
             /** 先拼接消息索引和内容 */
             List<MessageVO> msgList = Lists.newArrayList();
-            User self = userRepository.findOne(ownerUid);
-            User other = userRepository.findOne(otherUid);
+            User self = userRepository.findOne(ownerUid); // 发送方
+            User other = userRepository.findOne(otherUid); // 接收方
+            
+            // 循环查询每一条消息内容
             relationList.stream().forEach(relation -> {
-                Long mid = relation.getMid();
-                MessageContent contentVO = contentRepository.findOne(mid);
+                Long mid = relation.getMid(); // 消息ID
+                MessageContent contentVO = contentRepository.findOne(mid); // 查询消息内容
                 if (null != contentVO) {
                     String content = contentVO.getContent();
+                    // 用户在对话窗口中展示的每一条消息.
                     MessageVO messageVO = new MessageVO(mid, content, relation.getOwnerUid(), relation.getType(), relation.getOtherUid(), relation.getCreateTime(), self.getAvatar(), other.getAvatar(), self.getUsername(), other.getUsername());
                     msgList.add(messageVO);
                 }
             });
 
             /** 再变更未读 */
+            // 会话未读数
             Object convUnreadObj = redisTemplate.opsForHash().get(ownerUid + Constants.CONVERSION_UNREAD_SUFFIX, otherUid);
             if (null != convUnreadObj) {
                 long convUnread = Long.parseLong((String) convUnreadObj);
+                // 已读
                 redisTemplate.opsForHash().delete(ownerUid + Constants.CONVERSION_UNREAD_SUFFIX, otherUid);
+                // 总未读数 减去 当前会话已读数
                 long afterCleanUnread = redisTemplate.opsForValue().increment(ownerUid + Constants.TOTAL_UNREAD_SUFFIX, -convUnread);
                 /** 修正总未读 */
-                if (afterCleanUnread <= 0) {
+                if (afterCleanUnread <= 0) { // 如果无总未读数，则直接删除
                     redisTemplate.delete(ownerUid + Constants.TOTAL_UNREAD_SUFFIX);
                 }
             }
@@ -148,6 +158,9 @@ public class MessageServiceImpl implements MessageService {
         return null;
     }
 
+    /**
+     * 和UserServiceImpl中的getContacts方法一样
+     */
     @Override
     public MessageContactVO queryContacts(long ownerUid) {
         List<MessageContact> contacts = contactRepository.findMessageContactsByOwnerUidOrderByMidDesc(ownerUid);

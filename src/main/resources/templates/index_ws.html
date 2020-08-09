@@ -10,10 +10,7 @@
     <script type="text/javascript" th:src="@{/js/ws_chat.js}"></script>
     <script type="text/javascript" th:src="@{/bootstrap/js/bootstrap.min.js}"></script>
     <style>
-
     </style>
-
-
 </head>
 
 <body>
@@ -126,7 +123,6 @@
         queryMsg(event);
     })
 
-
     $("#message-text").keydown(function (event) {
         if (event.keyCode == "13") {
             sendMsg(event);
@@ -137,6 +133,7 @@
         sendMsg(event);
     });
 
+    // 每隔3秒查询未读数
     setInterval(queryUnread, 3000);
 
     /*]]>*/

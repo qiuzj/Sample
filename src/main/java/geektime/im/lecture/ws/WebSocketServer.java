@@ -1,5 +1,14 @@
 package geektime.im.lecture.ws;
 
+import java.util.concurrent.TimeUnit;
+
+import javax.annotation.PostConstruct;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
 import geektime.im.lecture.utils.EnhancedThreadFactory;
 import geektime.im.lecture.ws.handler.CloseIdleChannelHandler;
 import geektime.im.lecture.ws.handler.WebsocketRouterHandler;
@@ -23,13 +32,6 @@ import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutorGroup;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
-import javax.annotation.PostConstruct;
-import java.util.concurrent.TimeUnit;
 
 @Component
 public class WebSocketServer {
@@ -41,7 +43,6 @@ public class WebSocketServer {
 
     private ServerBootstrap bootstrap;
     private ChannelFuture channelFuture;
-
 
     private EventExecutorGroup eventExecutorGroup;
 

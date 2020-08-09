@@ -70,26 +70,26 @@ public class UserServiceImpl implements UserService {
     public MessageContactVO getContacts(User ownerUser) {
         List<MessageContact> contacts = contactRepository.findMessageContactsByOwnerUidOrderByMidDesc(ownerUser.getUid());
         if (contacts != null) {
-            long totalUnread = 0;
+            long totalUnread = 0; // 当前用户总的未读数
             Object totalUnreadObj = redisTemplate.opsForValue().get(ownerUser.getUid() + "_T");
             if (null != totalUnreadObj) {
                 totalUnread = Long.parseLong((String) totalUnreadObj);
             }
-
+            // 所有联系人信息
             final MessageContactVO contactVO = new MessageContactVO(ownerUser.getUid(), ownerUser.getUsername(), ownerUser.getAvatar(), totalUnread);
             contacts.stream().forEach(contact -> {
-                Long mid = contact.getMid();
-                MessageContent contentVO = contentRepository.findOne(mid);
-                User otherUser = userRepository.findOne(contact.getOtherUid());
+                Long mid = contact.getMid(); // 当前联系人会话的最后一条消息ID
+                MessageContent contentVO = contentRepository.findOne(mid); // 获取当前联系人会话的消息内容
+                User otherUser = userRepository.findOne(contact.getOtherUid()); // 当前联系人
 
                 if (null != contentVO) {
-                    long convUnread = 0;
+                    long convUnread = 0; // 每个联系人的未读数
                     Object convUnreadObj = redisTemplate.opsForHash().get(ownerUser.getUid() + "_C", otherUser.getUid());
                     if (null != convUnreadObj) {
                         convUnread = Long.parseLong((String) convUnreadObj);
                     }
                     MessageContactVO.ContactInfo contactInfo = contactVO.new ContactInfo(otherUser.getUid(), otherUser.getUsername(), otherUser.getAvatar(), mid, contact.getType(), contentVO.getContent(), convUnread, contact.getCreateTime());
-                    contactVO.appendContact(contactInfo);
+                    contactVO.appendContact(contactInfo); // 联系人会话一个个添加进去
                 }
             });
             return contactVO;

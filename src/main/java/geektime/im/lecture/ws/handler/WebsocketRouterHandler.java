@@ -35,7 +35,8 @@ public class WebsocketRouterHandler extends SimpleChannelInboundHandler<WebSocke
     private ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(50, new EnhancedThreadFactory("ackCheckingThreadPool"));
     private static final Logger logger = LoggerFactory.getLogger(WebsocketRouterHandler.class);
     private static final AttributeKey<AtomicLong> TID_GENERATOR = AttributeKey.valueOf("tid_generator");
-    private static final AttributeKey<ConcurrentHashMap> NON_ACKED_MAP = AttributeKey.valueOf("non_acked_map");
+    /** 已发送待ACK的Map */
+    private static final AttributeKey<ConcurrentHashMap<Long, JSONObject>> NON_ACKED_MAP = AttributeKey.valueOf("non_acked_map");
 
     @Autowired
     private MessageService messageService;
@@ -47,26 +48,30 @@ public class WebsocketRouterHandler extends SimpleChannelInboundHandler<WebSocke
             JSONObject msgJson = JSONObject.parseObject(msg);
             int type = msgJson.getIntValue("type");
             JSONObject data = msgJson.getJSONObject("data");
+            
             switch (type) {
-                case 0://心跳
+                case 0: // 心跳. { "type": 0, "data": {"uid":sender_id,"timeout": 120000}}
                     long uid = data.getLong("uid");
                     long timeout = data.getLong("timeout");
                     logger.info("[heartbeat]: uid = {} , current timeout is {} ms, channel = {}", uid, timeout, ctx.channel());
                     ctx.writeAndFlush(new TextWebSocketFrame("{\"type\":0,\"timeout\":" + timeout + "}"));
                     break;
-                case 1://上线消息
+                case 1: // 登录请求. 上线消息：{ "type": 1, "data": {"uid":'sender_id' }}
                     long loginUid = data.getLong("uid");
                     userChannel.put(loginUid, ctx.channel());
                     channelUser.put(ctx.channel(), loginUid);
+                    
                     ctx.channel().attr(TID_GENERATOR).set(new AtomicLong(0));
                     ctx.channel().attr(NON_ACKED_MAP).set(new ConcurrentHashMap<Long, JSONObject>());
+                    
                     logger.info("[user bind]: uid = {} , channel = {}", loginUid, ctx.channel());
                     ctx.writeAndFlush(new TextWebSocketFrame("{\"type\":1,\"status\":\"success\"}"));
                     break;
-                case 2: //查询消息
+                case 2: // 查询消息. { "type": 2, "data": {"ownerUid":' + sender_id + ',"otherUid":' + recipient_id + ' }}
                     long ownerUid = data.getLong("ownerUid");
                     long otherUid = data.getLong("otherUid");
                     List<MessageVO> messageVO = messageService.queryConversationMsg(ownerUid, otherUid);
+                    
                     String msgs = "";
                     if (messageVO != null) {
                         JSONObject jsonObject = new JSONObject();
@@ -77,12 +82,14 @@ public class WebsocketRouterHandler extends SimpleChannelInboundHandler<WebSocke
                     ctx.writeAndFlush(new TextWebSocketFrame(msgs));
                     break;
 
-                case 3: //发消息
+                case 3: // 发消息. { "type": 3, "data": {"senderUid":' + sender_id + ',"recipientUid":' + recipient_id + ', "content":"' + msg_content + '","msgType":1  }}
                     long senderUid = data.getLong("senderUid");
                     long recipientUid = data.getLong("recipientUid");
                     String content = data.getString("content");
-                    int msgType     = data.getIntValue("msgType");
+                    int msgType = data.getIntValue("msgType");
+                    
                     MessageVO messageContent = messageService.sendNewMsg(senderUid, recipientUid, content, msgType);
+                    
                     if (messageContent != null) {
                         JSONObject jsonObject = new JSONObject();
                         jsonObject.put("type", 3);
@@ -91,16 +98,16 @@ public class WebsocketRouterHandler extends SimpleChannelInboundHandler<WebSocke
                     }
                     break;
 
-                case 5: //查总未读
+                case 5: // 查总未读. { "type": 5, "data": {"uid":' + ownerUid + '}}
                     long unreadOwnerUid = data.getLong("uid");
                     long totalUnread = messageService.queryTotalUnread(unreadOwnerUid);
                     ctx.writeAndFlush(new TextWebSocketFrame("{\"type\":5,\"data\":{\"unread\":" + totalUnread + "}}"));
                     break;
 
-                case 6: //处理ack
+                case 6: // 处理客户端收到消息的ACK
                     long tid = data.getLong("tid");
                     ConcurrentHashMap<Long, JSONObject> nonAckedMap = ctx.channel().attr(NON_ACKED_MAP).get();
-                    nonAckedMap.remove(tid);
+                    nonAckedMap.remove(tid); // 确认消息已收到，删除消息
                     break;
             }
 
@@ -123,17 +130,26 @@ public class WebsocketRouterHandler extends SimpleChannelInboundHandler<WebSocke
         ctx.channel().close();
     }
 
+    /**
+     * 推送消息. 被NewMessageListener调用
+     * 
+     * @param recipientUid
+     * @param message
+     */
     public void pushMsg(long recipientUid, JSONObject message) {
-        Channel channel = userChannel.get(recipientUid);
+        Channel channel = userChannel.get(recipientUid); // 获取接收人的Channel
         if (channel != null && channel.isActive() && channel.isWritable()) {
+        	// 生成新的消息ID
             AtomicLong generator = channel.attr(TID_GENERATOR).get();
             long tid = generator.incrementAndGet();
-            message.put("tid", tid);
+            message.put("tid", tid); // 消息ID
+            
+            // 发送消息
             channel.writeAndFlush(new TextWebSocketFrame(message.toJSONString())).addListener(future -> {
                 if (future.isCancelled()) {
                     logger.warn("future has been cancelled. {}, channel: {}", message, channel);
-                } else if (future.isSuccess()) {
-                    addMsgToAckBuffer(channel, message);
+                } else if (future.isSuccess()) { // 发送成功
+                    addMsgToAckBuffer(channel, message); // 将推送的消息加入待ack列表
                     logger.warn("future has been successfully pushed. {}, channel: {}", message, channel);
                 } else {
                     logger.error("message write fail, {}, channel: {}", message, channel, future.cause());
@@ -161,9 +177,10 @@ public class WebsocketRouterHandler extends SimpleChannelInboundHandler<WebSocke
      */
     public void addMsgToAckBuffer(Channel channel, JSONObject msgJson) {
         channel.attr(NON_ACKED_MAP).get().put(msgJson.getLong("tid"), msgJson);
+        
         executorService.schedule(() -> {
             if (channel.isActive()) {
-                checkAndResend(channel, msgJson);
+                checkAndResend(channel, msgJson); // 检查并重推
             }
         }, 5000, TimeUnit.MILLISECONDS);
     }

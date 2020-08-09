@@ -1,11 +1,10 @@
 package geektime.im.lecture.service;
 
 
-import geektime.im.lecture.entity.MessageContent;
+import java.util.List;
+
 import geektime.im.lecture.vo.MessageContactVO;
 import geektime.im.lecture.vo.MessageVO;
-
-import java.util.List;
 
 public interface MessageService {
 
@@ -22,6 +21,7 @@ public interface MessageService {
 
     /**
      * 查两人的历史消息
+     * 
      * @param ownerUid
      * @param otherUid
      * @return
@@ -30,6 +30,7 @@ public interface MessageService {
 
     /**
      * 查询两人从某一条消息开始的新消息
+     * 
      * @param ownerUid
      * @param otherUid
      * @param fromMid
@@ -39,6 +40,7 @@ public interface MessageService {
 
     /**
      * 查询某个用户的最近联系人
+     * 
      * @param ownerUid
      * @return
      */
@@ -46,6 +48,7 @@ public interface MessageService {
 
     /**
      * 查询某人总未读
+     * 
      * @param ownerUid
      * @return
      */

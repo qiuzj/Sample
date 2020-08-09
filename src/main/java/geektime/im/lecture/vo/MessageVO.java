@@ -2,17 +2,23 @@ package geektime.im.lecture.vo;
 
 import java.util.Date;
 
+/**
+ * 用户在对话窗口中展示的每一条消息.
+ * 
+ * @author Binary life
+ *
+ */
 public class MessageVO {
-    private Long mid;
-    private String content;
-    private Long ownerUid;
-    private Integer type;
-    private Long otherUid;
-    private Date createTime;
-    private String ownerUidAvatar;
-    private String otherUidAvatar;
-    private String ownerName;
-    private String otherName;
+	private Long mid; // 消息ID
+    private String content; // 消息内容
+    private Long ownerUid; // 消息拥有者ID
+    private Integer type; // 消息类型. 发件箱还是收件箱
+    private Long otherUid; // 消息接收者ID
+    private Date createTime; // 创建时间
+    private String ownerUidAvatar; // 消息拥有者头像
+    private String otherUidAvatar; // 消息接收者头像
+    private String ownerName; // 拥有者名称
+    private String otherName; // 接收者名称
 
     public String getOwnerName() {
         return ownerName;

@@ -18,7 +18,13 @@ public class EmbededRedis {
 
     @PostConstruct
     public void startRedis() throws IOException {
-        redisServer = new RedisServer(redisPort);
+//        redisServer = new RedisServer(redisPort);
+        
+        redisServer = RedisServer.builder()
+        		  .port(redisPort)
+        		  .setting("maxheap 64M")
+        		  .build();
+        
         redisServer.start();
     }
 
