@@ -1,5 +1,13 @@
 package geektime.im.lecture.service.impl;
 
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Component;
+
 import geektime.im.lecture.dao.MessageContactRepository;
 import geektime.im.lecture.dao.MessageContentRepository;
 import geektime.im.lecture.dao.UserRepository;
@@ -10,13 +18,6 @@ import geektime.im.lecture.exceptions.InvalidUserInfoException;
 import geektime.im.lecture.exceptions.UserNotExistException;
 import geektime.im.lecture.service.UserService;
 import geektime.im.lecture.vo.MessageContactVO;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Component
 public class UserServiceImpl implements UserService {
@@ -29,7 +30,7 @@ public class UserServiceImpl implements UserService {
     private MessageContactRepository contactRepository;
 
     @Autowired
-    private RedisTemplate redisTemplate;
+    private RedisTemplate<Object, Object> redisTemplate;
 
     @Autowired
     private MessageContentRepository contentRepository;

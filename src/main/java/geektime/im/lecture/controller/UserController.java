@@ -1,13 +1,9 @@
 package geektime.im.lecture.controller;
 
-import geektime.im.lecture.Constants;
-import geektime.im.lecture.entity.User;
-import geektime.im.lecture.exceptions.InvalidUserInfoException;
-import geektime.im.lecture.exceptions.UserNotExistException;
-import geektime.im.lecture.service.UserService;
-import geektime.im.lecture.vo.MessageContactVO;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.List;
+
+import javax.servlet.http.HttpSession;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -15,8 +11,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import javax.servlet.http.HttpSession;
-import java.util.List;
+import geektime.im.lecture.Constants;
+import geektime.im.lecture.entity.User;
+import geektime.im.lecture.exceptions.InvalidUserInfoException;
+import geektime.im.lecture.exceptions.UserNotExistException;
+import geektime.im.lecture.service.UserService;
+import geektime.im.lecture.vo.MessageContactVO;
 
 @Controller
 public class UserController {
@@ -24,17 +24,11 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-
-
-    private static final Logger log = LoggerFactory.getLogger(UserController.class);
-
-
     @GetMapping(path = "/")
     public String welcomePage(@RequestParam(name = "username", required = false)
                                       String username, HttpSession session) {
         if (session.getAttribute(Constants.SESSION_KEY) != null) {
-//            return "index"; // 首页
-            return "index_ws"; // 首页
+            return "index"; // 首页
         } else {
             return "login"; // 登录页
         }
@@ -62,7 +56,6 @@ public class UserController {
             MessageContactVO contactVO = userService.getContacts(loginUser); // 获取所有会话信息及未读数
             model.addAttribute("contactVO", contactVO); // 返回会话信息
             return "index";
-
         } catch (UserNotExistException e1) {
             model.addAttribute("errormsg", email + ": 该用户不存在！");
             return "login";
@@ -72,6 +65,13 @@ public class UserController {
         }
     }
 
+    /**
+     * WebSocket页面
+     * 
+     * @param model
+     * @param session
+     * @return
+     */
     @RequestMapping(path = "/ws")
     public String ws(Model model, HttpSession session) {
         User loginUser = (User)session.getAttribute(Constants.SESSION_KEY);
@@ -84,6 +84,12 @@ public class UserController {
         return "index_ws";
     }
 
+    /**
+     * 退出
+     * 
+     * @param session
+     * @return
+     */
     @GetMapping("/logout")
     public String logout(HttpSession session) {
         // 移除session

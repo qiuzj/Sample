@@ -1,6 +1,5 @@
 package geektime.im.lecture.redis;
 
-import geektime.im.lecture.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -13,7 +12,8 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 import org.springframework.data.redis.serializer.GenericToStringSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
-import org.springframework.scheduling.annotation.EnableScheduling;
+
+import geektime.im.lecture.Constants;
 
 @Configuration
 public class SpringSessionRedisConfiguration {
@@ -40,7 +40,7 @@ public class SpringSessionRedisConfiguration {
     RedisTemplate<Object, Object> redisTemplate() {
         RedisTemplate<Object, Object> redisTemplate = new RedisTemplate<Object, Object>();
         redisTemplate.setConnectionFactory(jedisConnectionFactory());
-        GenericToStringSerializer genericToStringSerializer = new GenericToStringSerializer(Object.class);
+        GenericToStringSerializer<Object> genericToStringSerializer = new GenericToStringSerializer<Object>(Object.class);
 
         redisTemplate.setValueSerializer(genericToStringSerializer);
         redisTemplate.setKeySerializer(new StringRedisSerializer());
@@ -58,12 +58,12 @@ public class SpringSessionRedisConfiguration {
         return redisCacheManager;
     }
 
-
     @Bean
     RedisMessageListenerContainer redisContainer() {
         final RedisMessageListenerContainer container = new RedisMessageListenerContainer();
 
         container.setConnectionFactory(jedisConnectionFactory());
+        // newMessageListener监听topic WEBSOCKET_MSG_TOPIC的publish消息
         container.addMessageListener(new MessageListenerAdapter(newMessageListener), new ChannelTopic(Constants.WEBSOCKET_MSG_TOPIC));
 
         return container;
